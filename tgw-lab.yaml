@@ -1,0 +1,313 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Create four VPCs and hosts for a Transit Gateway lab
+
+Parameters:
+  SSHKeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: Choose a SSH key for the instances
+  LatestAMIId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+
+Outputs:
+  FirstHostPublicIP:
+    Value: !GetAtt FirstHost.PublicIp
+  ThirdHostPublicIP:
+    Value: !GetAtt ThirdHost.PublicIp
+  FirstHostPrivateIP:
+    Value: !GetAtt FirstHost.PrivateIp
+  SecondHostPrivateIP:
+    Value: !GetAtt SecondHost.PrivateIp
+  ThirdHostPrivateIP:
+    Value: !GetAtt ThirdHost.PrivateIp
+  FourthHostPrivateIP:
+    Value: !GetAtt FourthHost.PrivateIp
+
+Resources:
+  FirstVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.1.0/24
+      Tags:
+      - Key: Name
+        Value: "First VPC"
+
+  FirstSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      CidrBlock: 172.16.1.0/28
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: "First VPC First Subnet"
+      VpcId: !Ref FirstVPC
+
+  FirstSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "First VPC inbound SSH only"
+      GroupDescription: "Allow SSH from anywhere"
+      VpcId: !Ref FirstVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          ToPort: 22
+          FromPort: 0
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          ToPort: -1
+          FromPort: -1
+          CidrIp: 0.0.0.0/0
+
+  FirstInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: "Name"
+        Value: "First VPC IGW"
+
+  FirstAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref FirstInternetGateway
+      VpcId: !Ref FirstVPC
+
+  FirstSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref FirstRouteTable
+      SubnetId: !Ref FirstSubnet
+
+  FirstRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref FirstInternetGateway
+      RouteTableId: !Ref FirstRouteTable
+
+  FirstRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref FirstVPC
+      Tags:
+      - Key: Name
+        Value: "First VPC Main Route Table"
+
+  SecondVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.2.0/24
+      Tags:
+      - Key: Name
+        Value: "Second VPC"
+
+  SecondSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      CidrBlock: 172.16.2.0/28
+      Tags:
+      - Key: Name
+        Value: "Second VPC First Subnet"
+      VpcId: !Ref SecondVPC
+
+  SecondSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "Second VPC inbound SSH only"
+      GroupDescription: "Allow SSH from anywhere"
+      VpcId: !Ref SecondVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          ToPort: 22
+          FromPort: 0
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          ToPort: -1
+          FromPort: -1
+          CidrIp: 0.0.0.0/0
+
+  SecondSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref SecondRouteTable
+      SubnetId: !Ref SecondSubnet
+
+  SecondRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref SecondVPC
+      Tags:
+      - Key: Name
+        Value: "Second VPC Main Route Table"
+
+  ThirdVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.3.0/24
+      Tags:
+      - Key: Name
+        Value: "Third VPC"
+
+  ThirdSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      CidrBlock: 172.16.3.0/28
+      MapPublicIpOnLaunch: true
+      Tags:
+      - Key: Name
+        Value: "Third VPC First Subnet"
+      VpcId: !Ref ThirdVPC
+
+  ThirdSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "Third VPC inbound SSH only"
+      GroupDescription: "Allow SSH from anywhere"
+      VpcId: !Ref ThirdVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          ToPort: 22
+          FromPort: 0
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          ToPort: -1
+          FromPort: -1
+          CidrIp: 0.0.0.0/0
+
+  ThirdInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: "Name"
+        Value: "Third VPC IGW"
+
+  ThirdAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref ThirdInternetGateway
+      VpcId: !Ref ThirdVPC
+
+  ThirdRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref ThirdInternetGateway
+      RouteTableId: !Ref ThirdRouteTable
+
+  ThirdSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref ThirdRouteTable
+      SubnetId: !Ref ThirdSubnet
+
+  ThirdRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref ThirdVPC
+      Tags:
+      - Key: Name
+        Value: "Third VPC Main Route Table"
+
+  FourthVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 172.16.4.0/24
+      Tags:
+      - Key: Name
+        Value: "Fourth VPC"
+
+  FourthSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Sub "${AWS::Region}a"
+      CidrBlock: 172.16.4.0/28
+      Tags:
+      - Key: Name
+        Value: "Fourth VPC First Subnet"
+      VpcId: !Ref FourthVPC
+
+  FourthSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "Fourth VPC inbound SSH only"
+      GroupDescription: "Allow SSH from anywhere"
+      VpcId: !Ref FourthVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          ToPort: 22
+          FromPort: 0
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: icmp
+          ToPort: -1
+          FromPort: -1
+          CidrIp: 0.0.0.0/0
+
+  FourthSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref FourthRouteTable
+      SubnetId: !Ref FourthSubnet
+
+  FourthRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref FourthVPC
+      Tags:
+      - Key: Name
+        Value: "Fourth VPC Main Route Table"
+
+  FirstHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAMIId
+      InstanceType: t3.nano
+      SubnetId: !Ref FirstSubnet
+      KeyName: !Ref SSHKeyName
+      SecurityGroupIds:
+      - !Ref FirstSecurityGroup
+      Tags:
+      - Key: Name
+        Value: "First EC2 host"
+
+  SecondHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAMIId
+      InstanceType: t3.nano
+      SubnetId: !Ref SecondSubnet
+      KeyName: !Ref SSHKeyName
+      SecurityGroupIds:
+      - !Ref SecondSecurityGroup
+      Tags:
+      - Key: Name
+        Value: "Second EC2 host"
+        
+  ThirdHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAMIId
+      InstanceType: t3.nano
+      SubnetId: !Ref ThirdSubnet
+      KeyName: !Ref SSHKeyName
+      SecurityGroupIds:
+      - !Ref ThirdSecurityGroup
+      Tags:
+      - Key: Name
+        Value: "Third EC2 host"
+        
+  FourthHost:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAMIId
+      InstanceType: t3.nano
+      SubnetId: !Ref FourthSubnet
+      KeyName: !Ref SSHKeyName
+      SecurityGroupIds:
+      - !Ref FourthSecurityGroup
+      Tags:
+      - Key: Name
+        Value: "Fourth EC2 host"
+        
